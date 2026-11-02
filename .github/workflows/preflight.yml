@@ -1,0 +1,45 @@
+name: Baseline and documentation fix
+
+on:
+  push:
+    branches: [ci/preflight-middleware-name]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    if: github.repository == 'liorma6/starlette'
+    name: "${{ matrix.revision.name }} / Python ${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+        revision:
+          - name: baseline
+            sha: 0f08970e5cce0aec4fc1cea7447c262d741795eb
+          - name: documentation-fix
+            sha: 12550f1f65e29212329107578e1af85ed902b5b9
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.revision.sha }}
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: false
+      - name: Install dependencies
+        run: scripts/install
+      - name: Run linting checks
+        if: ${{ matrix.python-version != '3.14' }}
+        run: scripts/check
+      - name: Build package and docs
+        run: scripts/build
+      - name: Run tests
+        run: scripts/test
+      - name: Enforce coverage
+        run: scripts/coverage
